@@ -21,8 +21,8 @@ namespace FMTCP_Client
 
             while (true)
             {
-                Console.WriteLine(Get_Value("VT", "学习机_1ECU条码"));
-                Console.WriteLine(Write_Value("VT", "学习机_1ECU条码", k.ToString()));
+                //Console.WriteLine(Get_Value("VT", "学习机_1ECU条码"));
+                Console.WriteLine(Write_Value("VA", "VA1", ".3"));
                 k++;
                 Thread.Sleep(1000);
             }
@@ -57,7 +57,7 @@ namespace FMTCP_Client
                 if (value_command_type == 2 || value_command_type == 3 || value_command_type == 7)
                 {
                     #region double类型
-                    if (value.IndexOf('.') > -1)
+                    if (value.IndexOf('.') > 0)
                     {
                         byte[] write_values_command = new byte[18];//写值初始化指令
 
