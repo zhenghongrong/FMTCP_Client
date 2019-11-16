@@ -7,6 +7,8 @@ using System.Threading;
 
 namespace FMTCP_Client
 {
+    public enum Value_Type { AI = 1, AO, AR, DI, DO, DR, VA, VD, VT }
+
     class Program
     {
         static Socket tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -16,15 +18,23 @@ namespace FMTCP_Client
         #region 主逻辑
         static void Main(string[] args)
         {
-            tcpClient.Connect(point);
-            int k = 0;
-
-            while (true)
+            try
             {
-                //Console.WriteLine(Get_Value("VT", "学习机_1ECU条码"));
-                Console.WriteLine(Write_Value("VA", "VA1", ".3"));
-                k++;
-                Thread.Sleep(1000);
+                tcpClient.Connect(point);
+                int k = 0;
+
+                while (true)
+                {
+                    //Console.WriteLine(Get_Value("VT", "学习机_1ECU条码"));
+                    Console.WriteLine(Write_Value("DR", "DR1", ".8"));
+                    k++;
+                    Thread.Sleep(1000);
+                }
+            }
+            catch(Exception e)
+                {
+                Console.WriteLine("程序运行异常，请重启！");
+                Console.ReadKey();
             }
         }
         #endregion
@@ -32,24 +42,15 @@ namespace FMTCP_Client
         #region 写入变量内容
         static string Write_Value(string type, string name, string value)
         {
-            int value_command_type = 0;//装变量类型的关键数据
+            byte value_command_type = 0;//装变量类型的关键数据
             byte[] write_value_feedback = new byte[4];//装SCADA返回的数据
             string return_out;//返回给调用者
 
-            switch (type)
-            {
-                case "AO": value_command_type = 2; break;
-                case "AR": value_command_type = 3; break;
-                case "DO": value_command_type = 5; break;
-                case "DR": value_command_type = 6; break;
-                case "VA": value_command_type = 7; break;
-                case "VD": value_command_type = 8; break;
-                case "VT": value_command_type = 9; break;
-                default: break;
-            }
+            Value_Type k = (Value_Type)Enum.Parse(typeof(Value_Type), type);
+            value_command_type = (byte)k;//初始化准备获取变量的类型
 
             byte[] index = Get_Index(type, name);//获取变量索引
-            byte[] write_command_init = new byte[] { 62, 42, 39, 19, (byte)value_command_type, index[0], index[1], index[2], index[3] };//发送命令的初始化指令
+            byte[] write_command_init = new byte[] { 62, 42, 39, 19, value_command_type, index[0], index[1], index[2], index[3] };//发送命令的初始化指令
 
             try
             {
@@ -115,7 +116,15 @@ namespace FMTCP_Client
                     }
 
                     write_values_command[9] = 1;//发送bool类型，【9】=1。
-                    write_values_command[10] = (byte)int.Parse(value);
+
+                    if (int.Parse(value) == 0 || int.Parse(value) == 1)
+                    {
+                        write_values_command[10] = (byte)int.Parse(value);
+                    }
+                    else
+                    {
+                        return_out = "【" + value + "】只能输入【1】或者【0】，不能是其他数值";
+                    }
 
                     write_value_feedback = Send(write_values_command);//获取SCADA返回的数据
                 }
@@ -157,7 +166,7 @@ namespace FMTCP_Client
             }
             catch
             {
-                return_out = "string 转 数值异常，请检查！";
+                return_out = "【"+value+"】 转 【"+type+"】数值异常，请检查！";
             }
 
             return return_out;
@@ -169,22 +178,11 @@ namespace FMTCP_Client
         static string Get_Value(string type, string name)
         {
             byte[] value_temp = new byte[] { };//接受变量内容数组
-            int value_command_type = 0;//装变量类型的关键数据
+            byte value_command_type = 0;//装变量类型的关键数据
             byte[] index_temp = Get_Index(type, name);//获得索引
 
-            switch (type)
-            {
-                case "AI": value_command_type = 1; break;
-                case "AO": value_command_type = 2; break;
-                case "AR": value_command_type = 3; break;
-                case "DI": value_command_type = 4; break;
-                case "DO": value_command_type = 5; break;
-                case "DR": value_command_type = 6; break;
-                case "VA": value_command_type = 7; break;
-                case "VD": value_command_type = 8; break;
-                case "VT": value_command_type = 9; break;
-                default: break;
-            }
+            Value_Type k = (Value_Type)Enum.Parse(typeof(Value_Type), type);
+            value_command_type = (byte)k;
 
             if (index_temp[0] * 1 == -1)//索引如果是-1，则说明SCADA中没有该变量
             {
@@ -192,7 +190,7 @@ namespace FMTCP_Client
             }
             else
             {
-                byte[] value_Command = new byte[] { 62, 42, 39, 18, (byte)value_command_type, index_temp[0], index_temp[1], index_temp[2], index_temp[3] };//带入索引，得到获取变量数值的命令
+                byte[] value_Command = new byte[] { 62, 42, 39, 18, value_command_type, index_temp[0], index_temp[1], index_temp[2], index_temp[3] };//带入索引，得到获取变量数值的命令
                 value_temp = Send(value_Command);//发送获取变量数值的命令，得到变量数值报文
 
                 if (value_temp.Length <= 200)//如果超过200个字节，则说明返回的指令是错误的！
@@ -215,19 +213,9 @@ namespace FMTCP_Client
             byte[] index_command = new byte[] { };//装完整的索引命令
             byte[] index_temp = new byte[200];//接受索引数组
             byte[] index = new byte[4];//截取索引
-            switch (type)//根据变量的类型初始化不同的索引指令
-            {
-                case "AI": get_index_command_init[4] = 1; break;
-                case "AO": get_index_command_init[4] = 2; break;
-                case "AR": get_index_command_init[4] = 3; break;
-                case "DI": get_index_command_init[4] = 4; break;
-                case "DO": get_index_command_init[4] = 5; break;
-                case "DR": get_index_command_init[4] = 6; break;
-                case "VA": get_index_command_init[4] = 7; break;
-                case "VD": get_index_command_init[4] = 8; break;
-                case "VT": get_index_command_init[4] = 9; break;
-                default: break;
-            }
+
+            Value_Type k = (Value_Type)Enum.Parse(typeof(Value_Type), type);
+            get_index_command_init[4] = (byte)k;//初始化准备获取变量的类型
 
             name_byte = Encoding.Default.GetBytes(name);//将变量名称转化为数组
             for (int i = 0; i < name_byte.Length; i++)
