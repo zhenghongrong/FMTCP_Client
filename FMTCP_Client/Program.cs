@@ -20,12 +20,14 @@ namespace FMTCP_Client
         {
             try
             {
+                Console.WriteLine("程序启动中，请稍等......");
                 tcpClient.Connect(point);
+                
                 int k = 0;
 
                 while (true)
                 {
-                    //Console.WriteLine(Get_Value("VT", "学习机_1ECU条码"));
+                    Console.WriteLine(Get_Value("VT", "学习机_1ECU条码"));
                     Console.WriteLine(Write_Value("DR", "DR1", ".8"));
                     k++;
                     Thread.Sleep(1000);
@@ -33,7 +35,7 @@ namespace FMTCP_Client
             }
             catch(Exception e)
                 {
-                Console.WriteLine("程序运行异常，请重启！");
+                Console.WriteLine("程序运行异常，请重启！\n\r"+e.ToString());
                 Console.ReadKey();
             }
         }
