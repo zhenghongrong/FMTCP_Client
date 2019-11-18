@@ -224,7 +224,7 @@ namespace FMTCP_Client
         #region 获取文本中存储的索引值
         static byte[] Get_Parm_Index(string name)
         {
-            byte[] k = new byte[] { };
+            byte[] kk = new byte[] { };
             XmlDocument doc = new XmlDocument();
             string s = operaFile.Read();
             doc.LoadXml(s);
@@ -233,7 +233,7 @@ namespace FMTCP_Client
             string mac = node.ChildNodes[1].InnerText;//根据排列规律（tag下面的第二个节点）
             string type = node.ChildNodes[2].InnerText;
             string ip = node.ChildNodes[9].InnerText;
-            return k;
+            return kk;
         }
         #endregion
 
