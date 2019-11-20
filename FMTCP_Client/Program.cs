@@ -17,73 +17,28 @@ namespace FMTCP_Client
         static Socket tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         static IPAddress ipaddress = IPAddress.Parse("192.168.43.203");
         static EndPoint point = new IPEndPoint(ipaddress, 5002);
-        static OperaFile operaFile = new OperaFile();
         private static Dictionary<string, string> index_temp = new Dictionary<string, string>();
 
         #region 主逻辑
         static void Main(string[] args)
         {
-            bool is_star = false;
-            
-
             try
             {
                 Console.WriteLine("程序启动中，请稍等......");
-                //tcpClient.Connect(point);
+                tcpClient.Connect(point);
 
-                ////判断程序是否为第一次启动，如果是则进行一次变量索引值的获取，获取完成之后将不再进行获取
-                //if (!is_star)
-                //{
-                //    Start_Get_Index();
-                //    is_star = true;
-                //}
-                Get_Parm_Index("CODE");
-
-                //while (true)
-                //{
-                //    Console.WriteLine(Get_Value("VT", "CODE"));
-                //    Console.WriteLine(Write_Value("DR", "DR1", "8"));
-                //    Thread.Sleep(1000);
-                //}
+                while (true)
+                {
+                    Console.WriteLine(Get_Value("VT", "CODE"));
+                    Console.WriteLine(Write_Value("DR", "DR1", "0"));
+                    Thread.Sleep(1000);
+                }
             }
             catch (Exception e)
             {
                 Console.WriteLine("程序运行异常，请重启！\n\r" + e.ToString());
                 Console.ReadKey();
             }
-        }
-        #endregion
-
-        #region 程序开始时获取变量索引
-        static void Start_Get_Index()
-        {
-            string parm_index = "";
-            byte[] scada_CODE = Get_Index("VT", "CODE");
-            byte[] scada_DR1 = Get_Index("DR", "DR1");
-
-            //清空参数
-            operaFile.Write("");
-
-            parm_index += "<parm_index>";
-
-            parm_index += "<CODE>";
-            for (int i = 0; i < 4; i++)
-            {
-                parm_index += scada_CODE[i].ToString() + ",";
-            }
-            parm_index = parm_index.Substring(0, parm_index.Length - 1);
-            parm_index += "</CODE>";
-
-            parm_index += "<DR1>";
-            for (int i = 0; i < 4; i++)
-            {
-                parm_index += scada_DR1[i].ToString() + ",";
-            }
-            parm_index = parm_index.Substring(0, parm_index.Length - 1);
-            parm_index += "</DR1>";
-
-            parm_index += "</parm_index>";
-            operaFile.Write(parm_index);
         }
         #endregion
 
@@ -172,7 +127,7 @@ namespace FMTCP_Client
                     }
                     else
                     {
-                        return "【" + value + "】只能输入【1】或者【0】，不能是其他数值";
+                        return "【" + name + "】只能输入【1】或者【0】，不能是其他数值";
                     }
                 }
                 #endregion
@@ -219,22 +174,6 @@ namespace FMTCP_Client
             return return_out;
         }
 
-        #endregion
-
-        #region 获取文本中存储的索引值
-        static byte[] Get_Parm_Index(string name)
-        {
-            byte[] kk = new byte[] { };
-            XmlDocument doc = new XmlDocument();
-            string s = operaFile.Read();
-            doc.LoadXml(s);
-
-            XmlNode node = doc.SelectSingleNode("parm_index");//根据xpath,这里我把你数字后面的空格去掉了 
-            string mac = node.ChildNodes[1].InnerText;//根据排列规律（tag下面的第二个节点）
-            string type = node.ChildNodes[2].InnerText;
-            string ip = node.ChildNodes[9].InnerText;
-            return kk;
-        }
         #endregion
 
         #region 获取变量内容
@@ -346,35 +285,5 @@ namespace FMTCP_Client
             }
         }
         #endregion
-    }
-
-    class OperaFile
-    {
-        public string  Read()
-        {
-            StreamReader sr = new StreamReader("D:\\Users\\RON\\Documents\\C#project\\FMTCP_Client\\FMTCP_Client\\bin\\Debug\\Config.xml", Encoding.Default);
-            string line;
-            string strdata = "";
-            while ((line = sr.ReadLine()) != null)
-            {
-                Console.WriteLine(line.ToString());
-                strdata = line;
-            }
-            sr.Close();
-            return strdata;
-        }
-
-        public void Write(string content)
-        {
-            FileStream fs = new FileStream("D:\\Users\\RON\\Documents\\C#project\\FMTCP_Client\\FMTCP_Client\\bin\\Debug\\Config.xml", FileMode.Create);
-            StreamWriter sw = new StreamWriter(fs);
-            //开始写入
-            sw.Write(content);
-            //清空缓冲区
-            sw.Flush();
-            //关闭流
-            sw.Close();
-            fs.Close();
-        }
     }
 }
