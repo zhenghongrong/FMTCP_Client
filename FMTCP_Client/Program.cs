@@ -17,7 +17,6 @@ namespace FMTCP_Client
         static Socket tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         static IPAddress ipaddress = IPAddress.Parse("192.168.43.203");
         static EndPoint point = new IPEndPoint(ipaddress, 5002);
-        private static Dictionary<string, string> index_temp = new Dictionary<string, string>();
 
         #region 主逻辑
         static void Main(string[] args)
@@ -31,6 +30,7 @@ namespace FMTCP_Client
                 {
                     Console.WriteLine(Get_Value("VT", "CODE"));
                     Console.WriteLine(Write_Value("DR", "DR1", "0"));
+                    Write_Value("AR", "CODE", "0.388888");
                     Thread.Sleep(1000);
                 }
             }
@@ -49,10 +49,13 @@ namespace FMTCP_Client
             byte[] write_value_feedback = new byte[4];//装SCADA返回的数据
             string return_out;//返回给调用者
 
-            Value_Type k = (Value_Type)Enum.Parse(typeof(Value_Type), type);
-            value_command_type = (byte)k;//初始化准备获取变量的类型
+            value_command_type = (byte)(Value_Type)Enum.Parse(typeof(Value_Type), type);//初始化准备获取变量的类型
 
             byte[] index = Get_Index(type, name);//获取变量索引
+            if (index[0] * 1 == -1)//索引如果是-1，则说明SCADA中没有该变量
+            {
+                return "【" + name + "】" + "变量不存在，请检查！";
+            }
             byte[] write_command_init = new byte[] { 62, 42, 39, 19, value_command_type, index[0], index[1], index[2], index[3] };//发送命令的初始化指令
 
             try
@@ -183,8 +186,7 @@ namespace FMTCP_Client
             byte value_command_type = 0;//装变量类型的关键数据
             byte[] index_temp = Get_Index(type, name);//获得索引
 
-            Value_Type k = (Value_Type)Enum.Parse(typeof(Value_Type), type);
-            value_command_type = (byte)k;
+            value_command_type = (byte)(Value_Type)Enum.Parse(typeof(Value_Type), type);//根据变量类型改写填充发送的命令
 
             if (index_temp[0] * 1 == -1)//索引如果是-1，则说明SCADA中没有该变量
             {
@@ -216,8 +218,7 @@ namespace FMTCP_Client
             byte[] index_temp = new byte[200];//接受索引数组
             byte[] index = new byte[4];//截取索引
 
-            Value_Type k = (Value_Type)Enum.Parse(typeof(Value_Type), type);
-            get_index_command_init[4] = (byte)k;//初始化准备获取变量的类型
+            get_index_command_init[4] = (byte)(Value_Type)Enum.Parse(typeof(Value_Type), type); ;//根据变量类型填充发送的命令
 
             name_byte = Encoding.Default.GetBytes(name);//将变量名称转化为数组
             for (int i = 0; i < name_byte.Length; i++)
