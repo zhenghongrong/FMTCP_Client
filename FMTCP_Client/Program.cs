@@ -10,13 +10,11 @@ using System.Xml;
 
 namespace FMTCP_Client
 {
-    public enum Value_Type { AI = 1, AO, AR, DI, DO, DR, VA, VD, VT }
-
     class Program
     {
         static Socket tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        static IPAddress ipaddress = IPAddress.Parse("127.0.0.1");
-        static EndPoint point = new IPEndPoint(ipaddress, 60000);
+        static IPAddress ipaddress = IPAddress.Parse("192.168.43.203");
+        static EndPoint point = new IPEndPoint(ipaddress, 5002);
 
         #region 主逻辑
         static void Main(string[] args)
@@ -28,24 +26,10 @@ namespace FMTCP_Client
 
                 while (true)
                 {
-                    //Console.WriteLine(Get_Value("VT", "CODE"));
-                    //Console.WriteLine(Write_Value("DR", "DR1", "0"));
-                    //Write_Value("AR", "CODE", "0.388888");
-                    //Thread.Sleep(1000);
-
-                    //string l = RedVarValue("VT.学习机_1ECU条码").Trim('|');
-                    //string K = RedVarValue("AR.AR2").Trim('|');
-                    //string k = RedVarValue("VT.CODE|VT.VT1|AR.AR2|DR.DR1|VT.CODE");
-
-
-
-                    Console.WriteLine("The result is:" + RedVarValue("DR.DR1"));
-                    //Console.ReadKey();
-                    //Console.WriteLine("The result is:"+WriteVarValues("VT.CODE|VT.VT1|VA.VA1|AR.AR1","T|T|T|T"));
-                    //Console.ReadKey();
-                    
-                    //Console.WriteLine("The result is:" + ReadVarNames("VT"));
-                    //Console.ReadKey();
+                    Console.WriteLine("The result is:" + RedVarValue("DI.DI_TEST"));
+                    Console.ReadKey();
+                    Console.WriteLine("The result is:" + WriteVarValues("VT.CODE|VT.VT1|VA.VA1|AR.AR1", "T|yy|yy|yy"));
+                    Console.ReadKey();
                 }
             }
             catch (Exception e)
@@ -57,6 +41,11 @@ namespace FMTCP_Client
         #endregion
 
         #region 命令方式读取变量
+        /**********************
+         * 返回数据说明：
+         * {0}标识数据所在的设备断线
+         * (none)标识SCADA中无此数据
+         ***********************/
         static string RedVarValue(string name)
         {
             byte[] init = new byte[] { 62, 42, 07, 226 };//
@@ -77,6 +66,7 @@ namespace FMTCP_Client
             Buffer.BlockCopy(command_len, 0, send, init.Length, command_len.Length);
             Buffer.BlockCopy(command_to_byte, 0, send, init.Length + command_len.Length, command_to_byte.Length);
 
+            #region 滤波，防止数据抖动造成影响，连续读取5次相同的数据才确定数据可靠
             byte[] new_v = new byte[1024];
             byte[] old_v = new byte[1024];
             byte[] V = new byte[] { };
@@ -92,6 +82,7 @@ namespace FMTCP_Client
                     {
                         new_v = Send(send);
                         j++;
+                        Thread.Sleep(10);
                     }
                 }
                 else
@@ -101,6 +92,7 @@ namespace FMTCP_Client
                     old_v = new_v;
                 }
             }
+            #endregion
 
             byte[] re = new byte[V.Length];
 
@@ -109,12 +101,18 @@ namespace FMTCP_Client
 
             string K = Encoding.Default.GetString(re);
             K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
-            K = K.Trim('\0');
             return K;
         }
         #endregion
 
         #region 命令方式写入变量
+        /*
+         * 返回数据说明：
+         * {0}标识数据所在的设备断线
+         * (none)标识SCADA中无此数据
+         * T表示写入成功
+         * F表示写入失败（如果是VT类型的变量，两次写入的内容都是一样的，那么一定第二次一定会是F）
+         */
         static string WriteVarValues(string name,string values)
         {
             byte[] init = new byte[] { 62, 42, 07, 226 };
@@ -143,7 +141,7 @@ namespace FMTCP_Client
                 re[i] = V[i + 7];
 
             string K = Encoding.Default.GetString(re);
-            K = K.Trim('\0');
+            K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
             return K;
         }
         #endregion
@@ -175,7 +173,7 @@ namespace FMTCP_Client
                 re[i] = V[i + 7];
 
             string K = Encoding.Default.GetString(re);
-            K = K.Trim('\0');
+            K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
             return K;
         }
         #endregion
