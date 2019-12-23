@@ -27,9 +27,9 @@ namespace FMTCP_Client
                 while (true)
                 {
                     Console.WriteLine("The result is:" + RedVarValue("DI.DI_TEST"));
-                    Console.ReadKey();
-                    Console.WriteLine("The result is:" + WriteVarValues("VT.CODE|VT.VT1|VA.VA1|AR.AR1", "T|yy|yy|yy"));
-                    Console.ReadKey();
+                    //Console.ReadKey();
+                    //Console.WriteLine("The result is:" + WriteVarValues("VT.CODE|VT.VT1|VA.VA1|AR.AR1", "T|yy|yy|yy"));
+                    //Console.ReadKey();
                 }
             }
             catch (Exception e)
@@ -78,7 +78,7 @@ namespace FMTCP_Client
                 {
                     if (j >= 5)
                         V = new_v;
-                    if(j<5)
+                    else
                     {
                         new_v = Send(send);
                         j++;
@@ -111,7 +111,7 @@ namespace FMTCP_Client
          * {0}标识数据所在的设备断线
          * (none)标识SCADA中无此数据
          * T表示写入成功
-         * F表示写入失败（如果是VT类型的变量，两次写入的内容都是一样的，那么一定第二次一定会是F）
+         * F表示写入失败（如果是VT类型的变量，两次写入的内容都是一样的，那么第二次一定会是F）
          */
         static string WriteVarValues(string name,string values)
         {
