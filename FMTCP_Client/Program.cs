@@ -26,7 +26,7 @@ namespace FMTCP_Client
 
                 while (true)
                 {
-                    Console.WriteLine("The result is:" + RedVarValue("VT.%TIME"));
+                    Console.WriteLine("The result is:" + RedVarValue("VT.%CPUID"));
                     //Console.ReadKey();
                     //Console.WriteLine("The result is:" + WriteVarValues("VT.CODE|VT.VT1|VA.VA1|AR.AR1", "T|yy|yy|yy"));
                     //Console.ReadKey();
