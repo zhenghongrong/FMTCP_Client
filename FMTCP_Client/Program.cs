@@ -13,7 +13,7 @@ namespace FMTCP_Client
     class Program
     {
         static Socket tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        static IPAddress ipaddress = IPAddress.Parse("192.168.43.203");
+        static IPAddress ipaddress = IPAddress.Parse("10.0.0.101");
         static EndPoint point = new IPEndPoint(ipaddress, 5002);
 
         #region 主逻辑
@@ -26,7 +26,7 @@ namespace FMTCP_Client
 
                 while (true)
                 {
-                    Console.WriteLine("The result is:" + RedVarValue("DI.DI_TEST"));
+                    Console.WriteLine("The result is:" + RedVarValue("VT.%TIME"));
                     //Console.ReadKey();
                     //Console.WriteLine("The result is:" + WriteVarValues("VT.CODE|VT.VT1|VA.VA1|AR.AR1", "T|yy|yy|yy"));
                     //Console.ReadKey();
