@@ -13,7 +13,7 @@ namespace FMTCP_Client
     class Program
     {
         static Socket tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        static IPAddress ipaddress = IPAddress.Parse("10.0.0.101");
+        static IPAddress ipaddress = IPAddress.Parse("10.0.0.10");
         static EndPoint point = new IPEndPoint(ipaddress, 5002);
 
         #region 主逻辑
