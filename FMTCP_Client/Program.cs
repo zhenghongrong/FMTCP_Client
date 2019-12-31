@@ -13,7 +13,7 @@ namespace FMTCP_Client
     class Program
     {
         static Socket tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        static IPAddress ipaddress = IPAddress.Parse("10.0.0.10");
+        static IPAddress ipaddress = IPAddress.Parse("129.226.75.143");
         static EndPoint point = new IPEndPoint(ipaddress, 5002);
 
         #region 主逻辑
@@ -24,13 +24,22 @@ namespace FMTCP_Client
                 Console.WriteLine("程序启动中，请稍等......");
                 tcpClient.Connect(point);
 
+                #region 测试常规读写数据
+                string old_v = string.Empty;
+                string new_v = string.Empty;
                 while (true)
                 {
-                    Console.WriteLine("The result is:" + RedVarValue("VT.%CPUID"));
+                    new_v = ReadDevnoBytes(4, 0, 500);
+                    if (new_v != old_v)
+                    {
+                        Console.WriteLine("The result is:" + new_v);
+                        old_v = new_v;
+                    }
                     //Console.ReadKey();
                     //Console.WriteLine("The result is:" + WriteVarValues("VT.CODE|VT.VT1|VA.VA1|AR.AR1", "T|yy|yy|yy"));
                     //Console.ReadKey();
                 }
+                #endregion
             }
             catch (Exception e)
             {
@@ -71,10 +80,11 @@ namespace FMTCP_Client
             byte[] old_v = new byte[1024];
             byte[] V = new byte[] { };
             int j = 0;
+            int k = 0;//防止程序进入死循环
 
-            while (V != new_v)
+            while ((V != new_v) && (k < 100))
             {
-                if (bytecomp(new_v,old_v))
+                if (bytecomp(new_v, old_v))
                 {
                     if (j >= 5)
                         V = new_v;
@@ -88,19 +98,23 @@ namespace FMTCP_Client
                 else
                 {
                     j = 0;
+                    Thread.Sleep(10);
                     new_v = Send(send);
                     old_v = new_v;
+                    k++;
                 }
             }
+            if (k > 2)
+                Console.WriteLine("总共发生{0}次数据不稳定！", k);
             #endregion
-
             byte[] re = new byte[V.Length];
 
             for (int i = 0; i < V.Length - 7; i++)
                 re[i] = V[i + 7];
 
             string K = Encoding.Default.GetString(re);
-            K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
+            //K = K.Trim('\0');
+            //K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
             return K;
         }
         #endregion
@@ -141,7 +155,78 @@ namespace FMTCP_Client
                 re[i] = V[i + 7];
 
             string K = Encoding.Default.GetString(re);
-            K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
+            //K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
+            return K;
+        }
+        #endregion
+
+        #region 命令方式读取设备表
+        /*
+         * 返回数据说明：
+         */
+        static string ReadDevnoBytes(int devno, int start, int end)
+        {
+            byte[] init = new byte[] { 62, 42, 07, 226 };
+            byte[] command_len = new byte[3] { 0, 0, 0 };//长度最小为【WriteVarValues("")】的长度
+
+            string command = "";
+            command += "ReadDevnoBytes(";
+            command += devno;
+            command += ",";
+            command += start;
+            command += ",";
+            command += end;
+            command += ")";
+
+            command_len = GetComLen(command.Length);
+
+            byte[] command_to_byte = Encoding.Default.GetBytes(command);
+
+            byte[] send = new byte[init.Length + command_len.Length + command_to_byte.Length];
+
+            Buffer.BlockCopy(init, 0, send, 0, init.Length);
+            Buffer.BlockCopy(command_len, 0, send, init.Length, command_len.Length);
+            Buffer.BlockCopy(command_to_byte, 0, send, init.Length + command_len.Length, command_to_byte.Length);
+
+            #region 滤波防抖
+            byte[] new_v = new byte[1024];
+            byte[] old_v = new byte[1024];
+            byte[] V = new byte[] { };
+            int j = 0;
+            int k = 0;//防止程序进入死循环
+            
+            while ((V != new_v) && (k < 100))
+            {
+                if (bytecomp(new_v, old_v))
+                {
+                    if (j >= 5)
+                        V = new_v;
+                    else
+                    {
+                        new_v = Send(send);
+                        j++;
+                        Thread.Sleep(10);
+                    }
+                }
+                else
+                {
+                    j = 0;
+                    Thread.Sleep(10);
+                    new_v = Send(send);
+                    old_v = new_v;
+                    k++;
+                }
+            }
+            if (k > 2)
+                Console.WriteLine("总共发生{0}次数据不稳定！", k);
+            #endregion
+
+            byte[] re = new byte[V.Length];
+            for (int i = 0; i < V.Length - 7; i++)
+                re[i] = V[i + 7];
+
+            string K = Encoding.Default.GetString(re);
+            //K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
             return K;
         }
         #endregion
@@ -173,7 +258,7 @@ namespace FMTCP_Client
                 re[i] = V[i + 7];
 
             string K = Encoding.Default.GetString(re);
-            K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
+            //K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
             return K;
         }
         #endregion
