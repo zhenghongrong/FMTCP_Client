@@ -13,10 +13,13 @@ namespace FMTCP_Client
     class Program
     {
         static Socket tcpClient = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        static IPAddress ipaddress = IPAddress.Parse("129.226.75.143");
+        static IPAddress ipaddress = IPAddress.Parse("172.30.33.120");
+        //static IPAddress ipaddress = IPAddress.Parse("192.168.150.128");
         static EndPoint point = new IPEndPoint(ipaddress, 5002);
 
-        #region 主逻辑
+        static WebReference.SQL_ProcessCommon ws = new WebReference.SQL_ProcessCommon();//初始化接口
+
+        #region 获取数值
         static void Main(string[] args)
         {
             try
@@ -24,28 +27,146 @@ namespace FMTCP_Client
                 Console.WriteLine("程序启动中，请稍等......");
                 tcpClient.Connect(point);
 
-                #region 测试常规读写数据
-                string old_v = string.Empty;
-                string new_v = string.Empty;
+                //拼接OP90需要读取的变量的命令字符串
+                string[] OP90_ARR = new string[] { "DI.1_OP90_M5000", "DI.1_OP90_M5017", "DI.1_OP90_M5024", };
+                string OP90 = "";
+                for (int i = 0; i < OP90_ARR.Length; i++)
+                {
+                    OP90 += OP90_ARR[i];
+                    OP90 += "|";
+                }
+                OP90 = OP90.Substring(0, OP90.Length - 1);
+
+                //拼接OP220需要读取的变量的命令字符串
+                string[] OP220_ARR = new string[] { "DI.1_OP220_M5000", "DI.1_OP220_M5017", "DI.1_OP220_M5024" };
+                string OP220 = "";
+                for (int i = 0; i < OP220_ARR.Length; i++)
+                {
+                    OP220 += OP220_ARR[i];
+                    OP220 += "|";
+                }
+                OP220 = OP220.Substring(0, OP220.Length - 1);
+
+                //需要读取的变量的变量的命令字符串
+                string OP260A = "AI.1_OP260A_V0";
+                string OP260B = "AI.1_OP260B_V0";
+                string OP290 = "AI.1_OP290_D1006";
+
+                //存储读取回来的旧值
+                string OP90_value_o = null;
+                string OP220_value_o = null;
+                string OP260A_value_o = null;
+                string OP260B_value_o = null;
+                string OP290_value_o = null;
+
                 while (true)
                 {
-                    new_v = ReadDevnoBytes(4, 0, 500);
-                    if (new_v != old_v)
+                    string OP90_value_n = ReadVarValue(OP90);
+                    Thread.Sleep(1000);
+                    if (OP90_value_o != OP90_value_n)
                     {
-                        Console.WriteLine("The result is:" + new_v);
-                        old_v = new_v;
+                        OP90_value_o = OP90_value_n;
+                        Change("OP90", OP90_value_n);
                     }
-                    //Console.ReadKey();
-                    //Console.WriteLine("The result is:" + WriteVarValues("VT.CODE|VT.VT1|VA.VA1|AR.AR1", "T|yy|yy|yy"));
-                    //Console.ReadKey();
+
+                    string OP220_value_n = ReadVarValue(OP220);
+                    Thread.Sleep(1000);
+                    if (OP220_value_o != OP220_value_n)
+                    {
+                        OP220_value_o = OP220_value_n;
+                        Change("OP220", OP220_value_n);
+                    }
+
+                    string OP260A_value_n = ReadVarValue(OP260A);
+                    Thread.Sleep(1000);
+                    if (OP260A_value_o != OP260A_value_n)
+                    {
+                        OP260A_value_o = OP260A_value_n;
+                        Change("OP260A", OP260A_value_n);
+                    }
+
+                    string OP260B_value_n = ReadVarValue(OP260B);
+                    Thread.Sleep(1000);
+                    if (OP260B_value_o != OP260B_value_n)
+                    {
+                        OP260B_value_o = OP260B_value_n;
+                        Change("OP260B", OP260B_value_n);
+                    }
+
+                    string OP290_value_n = ReadVarValue(OP290);
+                    Thread.Sleep(1000);
+                    if (OP290_value_o != OP290_value_n)
+                    {
+                        OP290_value_o = OP290_value_n;
+                        Change("OP290", OP290_value_n);
+                    }
                 }
                 #endregion
             }
             catch (Exception e)
             {
-                Console.WriteLine("程序运行异常，请重启！\n\r" + e.ToString());
+                Console.WriteLine("程序运行异常，请重启！\r\n" + e.ToString());
                 Console.ReadKey();
             }
+        }
+        #region 逻辑处理
+        static void Change(string st_no, string value)
+        {
+            if (st_no == "OP260A" || st_no == "OP260B")
+            {
+                switch (value)
+                {
+                    case "4": Interface_("20018", st_no, "2"); break;//关机
+                    case "2": Interface_("20018", st_no, "3"); break;//运行
+                    case "1": Interface_("20018", st_no, "4"); break;//空闲
+                    case "0": Interface_("20018", st_no, "1"); break;//故障
+                    default:break;
+                }
+            }
+
+            if (st_no == "OP290")
+            {
+                switch (value)
+                {
+                    case "1": Interface_("20018", st_no, "3");break;//运行
+                    case "2": Interface_("20018", st_no, "1");break;//故障
+                    default:break;
+                }
+            }
+
+            if (st_no == "OP90" || st_no == "OP220")
+            {
+                string[] value_arr = value.Split('|');
+
+                if (value_arr[0] == "0" || value_arr[1] == "1")
+                    Interface_("20018", st_no, "1");
+                if (value_arr[0] == "1" && value_arr[1] == "0")
+                {
+                    if (value_arr[2] == "0")
+                        Interface_("20018", st_no, "3");
+                    if (value_arr[2] == "1")
+                        Interface_("20018", st_no, "4");
+                }
+            }
+        }
+        #endregion
+
+        #region 调用接口
+        static void Interface_(string sc_prno, string st_no, string status)
+        {
+            string[] status_name = new string[] { "","故障", "关机", "运行", "空闲" };
+
+            string XML = "";
+            XML += "<UpDate><Head><TableName>mes_dev_status</TableName></Head><Body1><dev_status>";
+            XML += status;
+            XML += "</dev_status></Body1><Body2><sc_prno>";
+            XML += sc_prno;
+            XML += "</sc_prno><st_no>";
+            XML += st_no;
+            XML += "</st_no>";
+            XML += "</Body2></UpDate>";
+            string k = ws.Input(XML);
+            Console.WriteLine(sc_prno + "线," + st_no + "状态变更为:" + status+"("+status_name[int.Parse(status)]+"):"+k);
         }
         #endregion
 
@@ -55,7 +176,7 @@ namespace FMTCP_Client
          * {0}标识数据所在的设备断线
          * (none)标识SCADA中无此数据
          ***********************/
-        static string RedVarValue(string name)
+        static string ReadVarValue(string name)
         {
             byte[] init = new byte[] { 62, 42, 07, 226 };//
             byte[] command_len = new byte[3] { 0, 0, 0 };//需要发送的命令的长度，长度最小为【ReadVarValues("")】的长度
@@ -81,6 +202,8 @@ namespace FMTCP_Client
             byte[] V = new byte[] { };
             int j = 0;
             int k = 0;//防止程序进入死循环
+
+            new_v = Send(send);
 
             while ((V != new_v) && (k < 100))
             {
@@ -113,8 +236,10 @@ namespace FMTCP_Client
                 re[i] = V[i + 7];
 
             string K = Encoding.Default.GetString(re);
-            //K = K.Trim('\0');
-            //K = K.Substring(K.IndexOf("|"), K.LastIndexOf("|"));
+            K = K.Trim('\0');
+            K = K.Substring(4);
+            K = K.Substring(0, K.Length - 1);
+
             return K;
         }
         #endregion
@@ -295,13 +420,14 @@ namespace FMTCP_Client
         #region SCADA的发送与接受
         static byte[] Send(byte[] Command)
         {
+            byte[] Result = new byte[2048];
             try
             {
-                byte[] receive = new byte[1024];
-
+                byte[] receive = new byte[2048];
                 tcpClient.Send(Command);//发送传递进来的数组
-                tcpClient.Receive(receive);//这里传递一个byte数组，实际上这个receive数组用来接收数据
-                return receive;
+                tcpClient.Receive(Result);//这里传递一个byte数组，实际上这个receive数组用来接收数据
+                
+                return Result;
             }
             catch (Exception ex)
             {
